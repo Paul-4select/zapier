@@ -1,0 +1,84 @@
+openapi: 3.0.0
+info:
+  title: Dialanta Leads API
+  version: "1.0.0"
+  description: API endpoint to create leads from Zapier.
+
+servers:
+  - url: https://4select-38749.bubbleapps.io/{version}/api/1.1
+    variables:
+      version:
+        default: v1
+        description: API version segment used in the URL.
+
+paths:
+  /wf/zapier_create_lead:
+    post:
+      summary: Create lead from Zapier
+      description: Creates a new lead in Dialanta via Bubble workflow triggered by Zapier.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeadRequest'
+      responses:
+        "200":
+          description: Lead created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLeadResponse'
+        "400":
+          description: Bad request (validation or missing required fields).
+        "401":
+          description: Unauthorized (invalid or missing token/api key).
+        "500":
+          description: Server error.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateLeadRequest:
+      type: object
+      required:
+        - api_key
+      properties:
+        api_key:
+          type: string
+          description: Dialanta API key used for validating the request.
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+        source:
+          type: string
+        interest:
+          type: string
+        email:
+          type: string
+        comments:
+          type: string
+
+    CreateLeadResponse:
+      type: object
+      description: Response body returned by the Bubble workflow.
+      properties:
+        status:
+          type: string
+          description: Result status, e.g. "success".
+        lead_id:
+          type: string
+          description: Identifier of the created lead.
+        error:
+          type: string
+          description: Error description if the request failed.
