@@ -1,10 +1,11 @@
 openapi: 3.0.0
+
 info:
   title: Dialanta Zapier API
   version: "1.0.0"
   description: >
-    API used by the Dialanta Zapier app:
-    authentication, creating leads/contacts, tags, and webhooks.
+    API used by the Dialanta Zapier app: custom auth, create lead/contact,
+    tags and webhooks.
 
 servers:
   - url: https://{domain}/api/1.1
@@ -13,12 +14,163 @@ servers:
         default: app.dialanta.com
         description: Bubble app domain without protocol.
 
+paths:
+  /wf/auth_zapier:
+    post:
+      summary: Verify API key
+      description: Used by the Zapier custom authentication test.
+      security:
+        - DialantaApiKeyHeader: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        "200":
+          description: Authentication succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "401":
+          description: Invalid API key.
+
+  /wf/zapier_create_lead:
+    post:
+      summary: Create lead
+      description: Creates a lead in Dialanta from Zapier.
+      security:
+        - DialantaApiKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeadOrContactRequest'
+      responses:
+        "200":
+          description: Lead created or error info.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLeadOrContactResponse'
+
+  /wf/zapier_create_contact:
+    post:
+      summary: Create contact
+      description: Creates a contact in Dialanta from Zapier.
+      security:
+        - DialantaApiKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeadOrContactRequest'
+      responses:
+        "200":
+          description: Contact created or error info.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLeadOrContactResponse'
+
+  /wf/zapier_get_tags:
+    post:
+      summary: Get company tags
+      description: Used by the hidden Zapier trigger "Tags" for dynamic dropdown options.
+      security:
+        - DialantaApiKeyHeader: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetTagsRequest'
+      responses:
+        "200":
+          description: List of tags.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+        "401":
+          description: Unauthorized.
+
+  /wf/zapier_reg_webhook_create_lead:
+    post:
+      summary: Subscribe/unsubscribe lead webhooks
+      description: Used by the trigger "When Lead Is Created".
+      security:
+        - DialantaApiKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookSubscribeRequest'
+      responses:
+        "200":
+          description: Webhook registration result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSubscribeResponse'
+        "401":
+          description: Unauthorized.
+
+  /wf/zapier_reg_webhook_added_contact:
+    post:
+      summary: Subscribe/unsubscribe contact webhooks
+      description: Used by the trigger "When Contact Is Added".
+      security:
+        - DialantaApiKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookSubscribeRequest'
+      responses:
+        "200":
+          description: Webhook registration result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSubscribeResponse'
+        "401":
+          description: Unauthorized.
+
+  /wf/zapier_get_leads:
+    post:
+      summary: Get leads list
+      description: Used as performList for both webhook triggers.
+      security:
+        - DialantaApiKeyHeader: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Array of leads.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeadItem'
+        "401":
+          description: Unauthorized.
+
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
     DialantaApiKeyHeader:
       type: apiKey
       in: header
@@ -27,12 +179,8 @@ components:
   schemas:
     AuthRequest:
       type: object
-      required:
-        - dialanta_api_key
-      properties:
-        dialanta_api_key:
-          type: string
-          description: API Key from Dialanta.
+      description: Empty JSON body; API key is passed via X-DIALANTA-API-KEY header.
+      additionalProperties: false
 
     AuthResponse:
       type: object
@@ -42,7 +190,7 @@ components:
       properties:
         cid:
           type: string
-          description: Company ID (used in some requests).
+          description: Company ID.
         name:
           type: string
           description: Company name.
@@ -50,15 +198,11 @@ components:
     CreateLeadOrContactRequest:
       type: object
       required:
-        - api_key
         - first_name
         - last_name
         - email
         - phone
       properties:
-        api_key:
-          type: string
-          description: Dialanta API key.
         first_name:
           type: string
         last_name:
@@ -96,10 +240,15 @@ components:
           description: "success" or "error".
         id:
           type: string
-          description: ID of the created lead/contact.
+          description: Lead or contact ID.
         error:
           type: string
-          description: Error message, if any.
+          description: Error message if any.
+
+    GetTagsRequest:
+      type: object
+      description: Empty JSON body; API key is passed via X-DIALANTA-API-KEY header.
+      additionalProperties: false
 
     Tag:
       type: object
@@ -109,33 +258,25 @@ components:
         name:
           type: string
 
-    GetTagsRequest:
-      type: object
-      required:
-        - api_key
-      properties:
-        api_key:
-          type: string
-          description: Dialanta API key.
-
     WebhookSubscribeRequest:
       type: object
       required:
-        - dialanta_api_key
         - cid
         - hookUrl
         - action
       properties:
-        dialanta_api_key:
-          type: string
         cid:
           type: string
+          description: Company ID.
         hookUrl:
           type: string
           format: uri
+          description: Zapier webhook URL.
         action:
           type: string
-          enum: [subscribe, unsubscribe]
+          enum:
+            - subscribe
+            - unsubscribe
 
     WebhookSubscribeResponse:
       type: object
@@ -167,143 +308,3 @@ components:
           format: date-time
         id:
           type: string
-
-paths:
-  /wf/auth_zapier:
-    post:
-      summary: Verify API key from Zapier
-      description: >
-        Used by the Zapier app for custom authentication test.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuthRequest'
-      responses:
-        "200":
-          description: Authentication succeeded.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        "401":
-          description: Invalid API key.
-
-  /wf/zapier_create_lead:
-    post:
-      summary: Create lead
-      description: Used by the Zapier action "Create Lead".
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateLeadOrContactRequest'
-      responses:
-        "200":
-          description: Lead creation result.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateLeadOrContactResponse'
-        "400":
-          description: Validation or data error.
-        "401":
-          description: Unauthorized.
-
-  /wf/zapier_create_contact:
-    post:
-      summary: Create contact
-      description: Used by the Zapier action "Create Contact".
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateLeadOrContactRequest'
-      responses:
-        "200":
-          description: Contact creation result.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateLeadOrContactResponse'
-        "400":
-          description: Validation or data error.
-        "401":
-          description: Unauthorized.
-
-  /wf/zapier_get_tags:
-    post:
-      summary: Get company tags
-      description: Used by the hidden Zapier trigger "Tags" for dynamic dropdown options.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GetTagsRequest'
-      responses:
-        "200":
-          description: List of tags.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Tag'
-        "401":
-          description: Unauthorized.
-
-  /wf/zapier_reg_webhook_create_lead:
-    post:
-      summary: Subscribe/unsubscribe webhooks for leads and contacts
-      description: >
-        Used by Zapier triggers "When Lead Is Created" and
-        "When Contact Is Added" to register/unregister webhooks.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WebhookSubscribeRequest'
-      responses:
-        "200":
-          description: Webhook registration result.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebhookSubscribeResponse'
-        "401":
-          description: Unauthorized.
-
-  /wf/zapier_get_leads:
-    post:
-      summary: Get leads list (for webhook triggers)
-      description: >
-        Used by Zapier as performList for the triggers
-        "When Lead Is Created" and "When Contact Is Added".
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Array of leads.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LeadItem'
-        "401":
-          description: Unauthorized.
